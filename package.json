@@ -1,0 +1,9 @@
+name = "home-automation-cron"
+main = "index.js"
+compatibility_date = "2026-06-21"
+
+# Runs once every minute. This is what guarantees Govee bulbs get turned off
+# on time even if nobody has the Home Automation app open when a timer
+# expires.
+[triggers]
+crons = ["* * * * *"]
