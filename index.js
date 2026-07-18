@@ -1,15 +1,7 @@
 // Standalone Cloudflare Worker (NOT part of the Pages project).
 //
 // Its only job: every minute, call GET /api/timers on your Home Automation
-// site. That endpoint already contains the cleanup logic that turns off any
-// Govee/Leviton device whose timer has expired — this Worker just makes
-// sure that check happens on a schedule, even if nobody has the app open.
-//
-// CRON_SECRET: a shared secret that lets this Worker bypass the PIN
-// middleware on the Home Automation site. Set it as an environment variable
-// on BOTH this Worker AND the Home Automation Pages project (same value).
-// Pick any random string, e.g. "cron-abc123xyz" — it never needs to be
-// typed by a human, just copy-pasted into both Cloudflare secret fields.
+// site, which runs the timer-cleanup / auto-off logic.
 
 const SITE_URL = "https://home-automation-88w.pages.dev/api/timers";
 
@@ -24,16 +16,23 @@ export default {
 };
 
 async function pingTimers(env) {
+  // Diagnostic: report whether this Worker can see its own CRON_SECRET.
+  const secret = env.CRON_SECRET;
+  console.log(
+    "CRON_SECRET present:", secret !== undefined && secret !== null,
+    "length:", typeof secret === "string" ? secret.length : "n/a"
+  );
+
   const headers = { "Content-Type": "application/json" };
-  if (env.CRON_SECRET) {
-    headers["x-cron-secret"] = env.CRON_SECRET;
+  if (secret) {
+    headers["x-cron-secret"] = secret;
   }
   try {
     const res = await fetch(SITE_URL, { method: "GET", headers });
     console.log("Cron ping to /api/timers:", res.status);
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      console.error("Cron ping got non-OK response:", res.status, body.slice(0, 200));
+      console.error("Cron ping got non-OK response:", res.status, body.slice(0, 120));
     }
   } catch (err) {
     console.error("Cron ping failed:", err);
